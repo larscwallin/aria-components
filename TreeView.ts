@@ -87,7 +87,7 @@ export class TreeView {
 
     private buildTree() {
         this.sourceData.forEach((item, index)=>{
-            let treeViewItem = new TreeViewItem(item, this, index);
+            let treeViewItem = new TreeViewItem(item, this, index, item.children.length);
             this.items.push(treeViewItem);
             this.itemDomElementToTreeViewItemMap!.set(treeViewItem.domElement!, treeViewItem);
             this.treeViewItemDataToTreeViewItemMap!.set(item, treeViewItem);
@@ -251,7 +251,7 @@ export class TreeViewItem {
     id: string;
     indexInGroup: number | undefined;
 
-    constructor(private treeItemData: ITreeViewItemData, private treeView: TreeView, indexInGroup: number) {
+    constructor(private treeItemData: ITreeViewItemData, private treeView: TreeView, indexInGroup: number, groupSize: number) {
         this.textContent = treeItemData.textContent;
         this.data = treeItemData.data;
         this.id = treeItemData.id;
@@ -268,17 +268,17 @@ export class TreeViewItem {
         this.domElement.appendChild(this.labelElement);
 
         this.domElement.setAttribute('aria-posinset', String(this.indexInGroup + 1));
-        this.domElement.setAttribute('aria-setsize', String(this.treeItemData.children.length));
+        this.domElement.setAttribute('aria-setsize', String(groupSize));
         treeView.itemDomElementToTreeViewItemMap!.set(this.domElement!, this);
         treeView.treeViewItemDataToTreeViewItemMap!.set(treeItemData, this);
 
         this.buttonElement = document.createElement('button');
         this.buttonElement.setAttribute('role','presentation');
 
-        this.createTree();
+        this.buildTree();
     }
 
-    private createTree() {
+    private buildTree() {
         if(this.domElement) {
             if(this.treeItemData.children && this.treeItemData.children.length > 0) {
 
@@ -286,7 +286,7 @@ export class TreeViewItem {
                 this.childContainerElement.setAttribute('role', 'group');
 
                 this.treeItemData.children.forEach((childItem: ITreeViewItemData, index)=>{
-                    let newTreeViewItem = new TreeViewItem(childItem, this.treeView, index);
+                    let newTreeViewItem = new TreeViewItem(childItem, this.treeView, index, this.treeItemData.children.length);
                     this.children.push(newTreeViewItem);
                     this.childContainerElement!.appendChild(newTreeViewItem.domElement!);
                 });
