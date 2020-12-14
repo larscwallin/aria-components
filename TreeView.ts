@@ -8,6 +8,12 @@ export class TreeView {
     treeViewItemDataToTreeViewItemMap: Map<ITreeViewItemData, TreeViewItem> | undefined = undefined;
 
     private cssStyle = `
+
+#${this.id} ul[role=group] {
+    max-width: 100%;
+    width: 100%;
+}
+
 #${this.id} li[role=treeitem] {
     list-style: none;
     display: flex;
@@ -17,20 +23,22 @@ export class TreeView {
 }
 
 #${this.id} li[role=treeitem] a {
-    max-width: 90%;
+    max-width: 90%;    
 }
 
 #${this.id} li[role=treeitem]:before {
-    content: ' '
+    content: ' ';
 }
 
 #${this.id} li[aria-expanded=true] button:before {
-    content: '▾'
+    content: '▾';
 }
 
 #${this.id} li[aria-expanded=false] button:before {
-    content: '▸'
-}`
+    content: '▸';
+}
+
+`
 
     private keyCode = {
         RETURN: 13,
@@ -55,7 +63,7 @@ export class TreeView {
         if(!cssStyle) {
             this.setTreeViewStyle(this.cssStyle);
         } else {
-            this.setTreeViewStyle(cssStyle);
+            this.setTreeViewStyle(this.cssStyle + cssStyle);
         }
 
         this.itemDomElementToTreeViewItemMap = new Map<HTMLLIElement|HTMLUListElement, TreeViewItem>();
@@ -103,7 +111,7 @@ export class TreeView {
                     break;
 
                 case this.keyCode.LEFT:
-                    if(treeItem.expanded) {
+                    if(treeItem.getExpanded()) {
                         treeItem.setExpanded(false);
                         break;
                     }
@@ -214,13 +222,13 @@ export class TreeViewItem {
     private childContainerElement: HTMLUListElement | undefined = undefined;
     private labelElement: HTMLAnchorElement;
     private buttonElement: HTMLButtonElement;
+    private expanded: boolean = false;
 
     domElement: HTMLLIElement | undefined = undefined;
     children: TreeViewItem[] = [];
     textContent: string;
     data: {};
     id: string;
-    expanded: boolean = false;
     indexInGroup: number | undefined;
 
     constructor(private treeItemData: ITreeViewItemData, private treeView: TreeView, indexInGroup: number) {
@@ -245,30 +253,41 @@ export class TreeViewItem {
         treeView.treeViewItemDataToTreeViewItemMap!.set(treeItemData, this);
 
         this.buttonElement = document.createElement('button');
+        this.buttonElement.setAttribute('role','presentation');
 
-        if(this.treeItemData.children && this.treeItemData.children.length > 0) {
+        this.createTree();
+    }
 
-            this.childContainerElement = document.createElement('ul');
-            this.childContainerElement.setAttribute('role', 'group');
+    private createTree() {
+        if(this.domElement) {
+            if(this.treeItemData.children && this.treeItemData.children.length > 0) {
 
-            this.treeItemData.children.forEach((childItem: ITreeViewItemData, index)=>{
-                let newTreeViewItem = new TreeViewItem(childItem, treeView, index);
-                this.children.push(newTreeViewItem);
-                this.childContainerElement!.appendChild(newTreeViewItem.domElement!);
-            });
+                this.childContainerElement = document.createElement('ul');
+                this.childContainerElement.setAttribute('role', 'group');
 
-            this.buttonElement.addEventListener('click', (ev)=>{
-                ev.preventDefault();
-                ev.cancelBubble = true;
-                this.expanded ?  this.setExpanded(false) : this.setExpanded(true);
-            });
+                this.treeItemData.children.forEach((childItem: ITreeViewItemData, index)=>{
+                    let newTreeViewItem = new TreeViewItem(childItem, this.treeView, index);
+                    this.children.push(newTreeViewItem);
+                    this.childContainerElement!.appendChild(newTreeViewItem.domElement!);
+                });
 
-            this.expanded ? this.buttonElement.innerHTML = '&nbsp;' : this.buttonElement.innerHTML = '&nbsp;';
+                this.buttonElement.addEventListener('click', (ev)=>{
+                    ev.preventDefault();
+                    ev.cancelBubble = true;
+                    this.expanded ?  this.setExpanded(false) : this.setExpanded(true);
+                });
 
-            this.domElement.appendChild(this.childContainerElement);
-            this.domElement.prepend(this.buttonElement);
-            this.setExpanded(this.expanded);
+                this.getExpanded() ? this.buttonElement.innerHTML = '&nbsp;' : this.buttonElement.innerHTML = '&nbsp;';
+
+                this.domElement.appendChild(this.childContainerElement);
+                this.domElement.prepend(this.buttonElement);
+                this.setExpanded(this.expanded);
+            }
         }
+    }
+
+    getExpanded() {
+        return this.expanded;
     }
 
     setExpanded(expanded: boolean = false) {
