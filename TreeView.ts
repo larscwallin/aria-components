@@ -6,6 +6,9 @@ export class TreeView {
     rendered: boolean = false;
     itemDomElementToTreeViewItemMap: Map<HTMLLIElement | HTMLUListElement, TreeViewItem> | undefined = undefined;
     treeViewItemDataToTreeViewItemMap: Map<ITreeViewItemData, TreeViewItem> | undefined = undefined;
+    activeItem: TreeViewItem | undefined = undefined;
+    selectedItem: TreeViewItem | undefined = undefined;
+    sourceData: ITreeViewItemData[] = [];
 
     private cssStyle = `
 
@@ -38,6 +41,10 @@ export class TreeView {
     content: '▸';
 }
 
+#${this.id} li[aria-selected] > a {
+    text-decoration: underline;
+}
+
 `
 
     private keyCode = {
@@ -59,6 +66,9 @@ export class TreeView {
         this.domElement.setAttribute('role', 'tree');
         this.styleElement = document.createElement('style');
         this.domElement.prepend(this.styleElement);
+        this.sourceData = sourceData;
+        this.itemDomElementToTreeViewItemMap = new Map<HTMLLIElement|HTMLUListElement, TreeViewItem>();
+        this.treeViewItemDataToTreeViewItemMap = new Map<ITreeViewItemData, TreeViewItem>();
 
         if(!cssStyle) {
             this.setTreeViewStyle(this.cssStyle);
@@ -66,23 +76,23 @@ export class TreeView {
             this.setTreeViewStyle(this.cssStyle + cssStyle);
         }
 
-        this.itemDomElementToTreeViewItemMap = new Map<HTMLLIElement|HTMLUListElement, TreeViewItem>();
-        this.treeViewItemDataToTreeViewItemMap = new Map<ITreeViewItemData, TreeViewItem>();
-
-        sourceData.forEach((item, index)=>{
-            let treeViewItem = new TreeViewItem(item, this, index);
-            this.items.push(treeViewItem);
-            this.itemDomElementToTreeViewItemMap!.set(treeViewItem.domElement!, treeViewItem);
-            this.treeViewItemDataToTreeViewItemMap!.set(item, treeViewItem);
-            this.domElement!.appendChild(treeViewItem.domElement!);
-        });
-
+        this.buildTree();
     }
 
     private setTreeViewStyle (cssStyle: string) {
         if(this.styleElement) {
             this.styleElement.innerHTML = cssStyle;
         }
+    }
+
+    private buildTree() {
+        this.sourceData.forEach((item, index)=>{
+            let treeViewItem = new TreeViewItem(item, this, index);
+            this.items.push(treeViewItem);
+            this.itemDomElementToTreeViewItemMap!.set(treeViewItem.domElement!, treeViewItem);
+            this.treeViewItemDataToTreeViewItemMap!.set(item, treeViewItem);
+            this.domElement!.appendChild(treeViewItem.domElement!);
+        });
     }
 
     private mapKeyUpEvents(element: HTMLLIElement, treeItem: TreeViewItem) {
@@ -100,26 +110,26 @@ export class TreeView {
                     if(ev.target instanceof HTMLButtonElement) {
                         break;
                     }
-
+                    treeItem.setIsSelected();
                     element.click();
                     break;
                 case this.keyCode.RIGHT:
                     if (treeItem!.children.length > 0) {
-                        treeItem.setExpanded(true);
-                        treeItem!.children[0].focus();
+                        treeItem.setIsExpanded(true);
+                        treeItem!.children[0].setIsActive(true);
                     }
                     break;
 
                 case this.keyCode.LEFT:
-                    if(treeItem.getExpanded()) {
-                        treeItem.setExpanded(false);
+                    if(treeItem.getIsExpanded()) {
+                        treeItem.setIsExpanded(false);
                         break;
                     }
                     parentItem = treeItem!.getParent();
                     if (parentItem) {
-                        parentItem.focus();
+                        parentItem.setIsActive(true);
                     } else {
-                        this.items[0].focus();
+                        this.items[0].setIsActive(true);
                     }
                     break;
 
@@ -127,7 +137,7 @@ export class TreeView {
 
                     nextItem = treeItem!.getNextAdjacent();
                     if (nextItem) {
-                        nextItem.focus();
+                        nextItem.setIsActive(true);
 
                     }
                     else {
@@ -135,7 +145,7 @@ export class TreeView {
                         if (parentItem) {
                             let nextParentSibling = parentItem.getNextSibling();
                             if (nextParentSibling) {
-                                nextParentSibling.focus();
+                                nextParentSibling.setIsActive(true);
                             }
                         }
                     }
@@ -144,12 +154,12 @@ export class TreeView {
                 case this.keyCode.UP:
                     previousItem = treeItem!.getPreviousAdjacent();
                     if (previousItem) {
-                        previousItem.focus();
+                        previousItem.setIsActive(true);
                     }
                     else {
                         let parentItem = treeItem!.getParent();
                         if (parentItem) {
-                            parentItem.focus();
+                            parentItem.setIsActive(true);
                         }
                     }
                     break;
@@ -157,14 +167,14 @@ export class TreeView {
                 case this.keyCode.HOME:
                     let firstItem = this.items[0];
                     if (firstItem) {
-                        firstItem.focus();
+                        firstItem.setIsActive(true);
                     }
                     break;
 
                 case this.keyCode.END:
                     let lastItem = this.items[this.items.length - 1];
                     if (lastItem) {
-                        lastItem.focus();
+                        lastItem.setIsActive(true);
                     }
                     break;
             }
@@ -212,6 +222,14 @@ export class TreeView {
         return undefined;
     }
 
+    expandToTreeItem(item: TreeViewItem) {
+        let parent = item.getParent();
+        if(parent) {
+            parent.setIsExpanded(true);
+            this.expandToTreeItem(parent);
+        }
+    }
+
     destroy() {
 
     }
@@ -222,7 +240,9 @@ export class TreeViewItem {
     private childContainerElement: HTMLUListElement | undefined = undefined;
     private labelElement: HTMLAnchorElement;
     private buttonElement: HTMLButtonElement;
-    private expanded: boolean = false;
+    private isExpanded: boolean = false;
+    private isActive: boolean = false;
+    private isSelected: boolean = false;
 
     domElement: HTMLLIElement | undefined = undefined;
     children: TreeViewItem[] = [];
@@ -274,30 +294,68 @@ export class TreeViewItem {
                 this.buttonElement.addEventListener('click', (ev)=>{
                     ev.preventDefault();
                     ev.cancelBubble = true;
-                    this.expanded ?  this.setExpanded(false) : this.setExpanded(true);
+                    this.isExpanded ?  this.setIsExpanded(false) : this.setIsExpanded(true);
                 });
 
-                this.getExpanded() ? this.buttonElement.innerHTML = '&nbsp;' : this.buttonElement.innerHTML = '&nbsp;';
+                this.getIsExpanded() ? this.buttonElement.innerHTML = '&nbsp;' : this.buttonElement.innerHTML = '&nbsp;';
 
                 this.domElement.appendChild(this.childContainerElement);
                 this.domElement.prepend(this.buttonElement);
-                this.setExpanded(this.expanded);
+                this.setIsExpanded(this.isExpanded);
             }
         }
     }
 
-    getExpanded() {
-        return this.expanded;
+    setIsSelected(selected: boolean = true) {
+        this.isSelected = selected;
+        if(selected) {
+            this.domElement?.setAttribute('aria-selected', 'true');
+            this.treeView.selectedItem?.setIsSelected(false);
+            this.treeView.selectedItem = this;
+        } else {
+            this.domElement?.removeAttribute('aria-selected');
+            this.treeView.selectedItem = undefined;
+        }
     }
 
-    setExpanded(expanded: boolean = false) {
+    getIsSelected() {
+        return this.isSelected;
+    }
+
+    setIsActive(active: boolean, scrollIntoView: boolean = true) {
+        let scrollIntoViewOptions: ScrollIntoViewOptions = {behavior: "smooth", block: "center", inline: "center"};
+        if(active) {
+            this.treeView.activeItem?.setIsActive(false);
+            this.treeView.activeItem = this;
+            this.domElement?.focus();
+
+            if(scrollIntoView) {
+                this.domElement?.scrollIntoView(scrollIntoViewOptions);
+            }
+
+        } else {
+            this.treeView.activeItem = undefined;
+            this.domElement?.blur();
+        }
+    }
+
+    getIsActive(): boolean {
+        return this.isActive;
+    }
+
+    getIsExpanded(): boolean {
+        return this.isExpanded;
+    }
+
+    setIsExpanded(expanded: boolean = true) {
         if(this.domElement && this.childContainerElement) {
-            this.expanded = expanded;
+            this.isExpanded = expanded;
             this.domElement.setAttribute('aria-expanded', expanded + '');
 
             if(expanded) {
                 this.childContainerElement.style.display = 'block';
                 this.buttonElement.innerHTML = '&nbsp;';
+
             } else {
                 this.childContainerElement.style.display = 'none';
                 this.buttonElement.innerHTML = '&nbsp;';
