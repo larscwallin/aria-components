@@ -33,7 +33,7 @@ interface IMyCustomItemData {
 
 let treeItems: ITreeViewItemSourceData<IMyCustomItemData>[] = [];
 
-let treeItems = [{
+treeItems = [{
   id: 'item1',
   textContent: 'This  is item 1',
   data: {
