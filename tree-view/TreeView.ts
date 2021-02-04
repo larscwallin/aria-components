@@ -1,23 +1,23 @@
-export class TreeView {
-    private id: string = 'TV' + Date.now().toString();
+export class TreeView<T = any> {
+    private id: string = 'ariaTreeView-' + Date.now().toString();
     domElement: HTMLUListElement | undefined = undefined;
     styleElement: HTMLStyleElement | undefined = undefined;
-    items: TreeViewItem[] = [];
+    items: TreeViewItem<T>[] = [];
     rendered: boolean = false;
-    itemDomElementToTreeViewItemMap: Map<HTMLLIElement | HTMLUListElement, TreeViewItem> | undefined = undefined;
-    treeViewItemDataToTreeViewItemMap: Map<ITreeViewItemData, TreeViewItem> | undefined = undefined;
-    activeItem: TreeViewItem | undefined = undefined;
-    selectedItem: TreeViewItem | undefined = undefined;
-    sourceData: ITreeViewItemData[] = [];
+    itemDomElementToTreeViewItemMap: Map<HTMLLIElement | HTMLUListElement, TreeViewItem<T>>;
+    treeViewItemDataToTreeViewItemMap: Map<ITreeViewItemSourceData<T>, TreeViewItem<T>>;
+    activeItem: TreeViewItem<T> | undefined = undefined;
+    selectedItem: TreeViewItem<T> | undefined = undefined;
+    sourceData: ITreeViewItemSourceData<T>[] = [];
+    cssClassName: string = `AriaTreeView-${this.id}`;
 
     private cssStyle = `
-
-#${this.id} ul[role=group] {
+.${this.cssClassName} ul[role=group] {
     max-width: 100%;
     width: 100%;
 }
 
-#${this.id} li[role=treeitem] {
+.${this.cssClassName} li[role=treeitem] {
     list-style: none;
     display: flex;
     flex-direction: row;
@@ -25,23 +25,23 @@ export class TreeView {
     align-items: baseline;
 }
 
-#${this.id} li[role=treeitem] a {
+.${this.cssClassName} li[role=treeitem] a {
     max-width: 90%;    
 }
 
-#${this.id} li[role=treeitem]:before {
+.${this.cssClassName} li[role=treeitem]:before {
     content: ' ';
 }
 
-#${this.id} li[aria-expanded=true] button:before {
+.${this.cssClassName} li[aria-expanded=true] button:before {
     content: '▾';
 }
 
-#${this.id} li[aria-expanded=false] button:before {
+.${this.cssClassName} li[aria-expanded=false] button:before {
     content: '▸';
 }
 
-#${this.id} li[aria-selected] > a {
+#${this.cssClassName} li[aria-selected] > a {
     text-decoration: underline;
 }
 
@@ -60,23 +60,32 @@ export class TreeView {
         DOWN: 40
     };
 
-    constructor(private container: HTMLElement, sourceData: ITreeViewItemData[], cssStyle?: string) {
+    constructor(private container: HTMLElement, sourceData: ITreeViewItemSourceData<T>[]) {
         this.domElement = document.createElement('ul');
-        this.domElement.setAttribute('id', this.id);
+        this.domElement.setAttribute('class', `AriaTreeView-${this.id}`);
         this.domElement.setAttribute('role', 'tree');
         this.styleElement = document.createElement('style');
         this.domElement.prepend(this.styleElement);
         this.sourceData = sourceData;
-        this.itemDomElementToTreeViewItemMap = new Map<HTMLLIElement|HTMLUListElement, TreeViewItem>();
-        this.treeViewItemDataToTreeViewItemMap = new Map<ITreeViewItemData, TreeViewItem>();
+        this.itemDomElementToTreeViewItemMap = new Map<HTMLLIElement|HTMLUListElement, TreeViewItem<T>>();
+        this.treeViewItemDataToTreeViewItemMap = new Map<ITreeViewItemSourceData<T>, TreeViewItem<T>>();
 
-        if(!cssStyle) {
-            this.setTreeViewStyle(this.cssStyle);
-        } else {
-            this.setTreeViewStyle(this.cssStyle + cssStyle);
-        }
+        this.setTreeViewStyle(this.cssStyle);
 
         this.buildTree();
+    }
+
+    setId(uid: string) {
+        this.id = uid;
+        if(this.domElement) {
+            this.domElement.setAttribute('id', this.id);
+        }
+    }
+
+    addClassName(className: string) {
+        if(this.domElement) {
+            this.domElement.classList.add(className);
+        }
     }
 
     private setTreeViewStyle (cssStyle: string) {
@@ -87,7 +96,7 @@ export class TreeView {
 
     private buildTree() {
         this.sourceData.forEach((item, index)=>{
-            let treeViewItem = new TreeViewItem(item, this, index, item.children.length);
+            let treeViewItem = new TreeViewItem<T>(item, this, index, item.children.length);
             this.items.push(treeViewItem);
             this.itemDomElementToTreeViewItemMap!.set(treeViewItem.domElement!, treeViewItem);
             this.treeViewItemDataToTreeViewItemMap!.set(item, treeViewItem);
@@ -95,13 +104,13 @@ export class TreeView {
         });
     }
 
-    private mapKeyUpEvents(element: HTMLLIElement, treeItem: TreeViewItem) {
+    private mapKeyUpEvents(element: HTMLLIElement, treeItem: TreeViewItem<T>) {
 
         element.addEventListener('keyup', (ev: KeyboardEvent) => {
             ev.cancelBubble = true;
-            let previousItem: TreeViewItem | undefined;
-            let nextItem: TreeViewItem | undefined;
-            let parentItem: TreeViewItem | undefined;
+            let previousItem: TreeViewItem<T> | undefined;
+            let nextItem: TreeViewItem<T> | undefined;
+            let parentItem: TreeViewItem<T> | undefined;
 
 
             switch (ev.keyCode) {
@@ -201,28 +210,20 @@ export class TreeView {
         this.container.appendChild(this.domElement!);
     }
 
-    filter(_filterString: string) {
-
-    }
-
-    getTreeItemByNavigationItem (navItem: ITreeViewItemData): TreeViewItem | undefined {
-        return this.treeViewItemDataToTreeViewItemMap!.get(navItem);
-    }
-
-    getTreeItemByElement (el: HTMLLIElement): TreeViewItem | undefined {
+    getTreeItemByElement (el: HTMLLIElement): TreeViewItem<T> | undefined {
         return this.itemDomElementToTreeViewItemMap!.get(el);
     }
 
-    getTreeItemByItemData(data: {}): TreeViewItem | undefined {
-        this.treeViewItemDataToTreeViewItemMap!.forEach((key, value)=>{
+    getTreeItemByItemSourceData(data: T): TreeViewItem<T> | undefined {
+        for (let [key, value] of this.treeViewItemDataToTreeViewItemMap.entries()) {
             if(key.data == data) {
                 return value;
             }
-        });
+        }
         return undefined;
     }
 
-    expandToTreeItem(item: TreeViewItem) {
+    expandToTreeItem(item: TreeViewItem<T>) {
         let parent = item.getParent();
         if(parent) {
             parent.setIsExpanded(true);
@@ -230,13 +231,16 @@ export class TreeView {
         }
     }
 
+    filterTreeItemsByItemData(filterCallback: (itemData: T) => boolean): TreeViewItem<T>[] {
+        return this.items.filter(item => filterCallback(item.data))
+    }
+
     destroy() {
 
     }
 }
 
-
-export class TreeViewItem {
+export class TreeViewItem<T = any> {
     private childContainerElement: HTMLUListElement | undefined = undefined;
     private labelElement: HTMLAnchorElement;
     private buttonElement: HTMLButtonElement;
@@ -245,32 +249,32 @@ export class TreeViewItem {
     private isSelected: boolean = false;
 
     domElement: HTMLLIElement | undefined = undefined;
-    children: TreeViewItem[] = [];
+    children: TreeViewItem<T>[] = [];
     textContent: string;
-    data: {};
+    data: T;
     id: string;
     indexInGroup: number | undefined;
 
-    constructor(private treeItemData: ITreeViewItemData, private treeView: TreeView, indexInGroup: number, groupSize: number) {
-        this.textContent = treeItemData.textContent;
-        this.data = treeItemData.data;
-        this.id = treeItemData.id;
+    constructor(private treeViewItemSourceData: ITreeViewItemSourceData<T>, private treeView: TreeView, indexInGroup: number, groupSize: number) {
+        this.textContent = treeViewItemSourceData.textContent;
+        this.data = treeViewItemSourceData.data;
+        this.id = treeViewItemSourceData.id;
         this.indexInGroup = indexInGroup;
 
         this.domElement = document.createElement('li');
-        this.domElement.id = treeItemData.id;
+        this.domElement.id = treeViewItemSourceData.id;
         this.domElement.setAttribute('role', 'treeitem');
         this.domElement.setAttribute('tabindex', '0');
 
         this.labelElement = document.createElement('a');
         this.labelElement.setAttribute('role', 'presentation');
-        this.labelElement.textContent = treeItemData.textContent;
+        this.labelElement.textContent = treeViewItemSourceData.textContent;
         this.domElement.appendChild(this.labelElement);
 
         this.domElement.setAttribute('aria-posinset', String(this.indexInGroup + 1));
         this.domElement.setAttribute('aria-setsize', String(groupSize));
         treeView.itemDomElementToTreeViewItemMap!.set(this.domElement!, this);
-        treeView.treeViewItemDataToTreeViewItemMap!.set(treeItemData, this);
+        treeView.treeViewItemDataToTreeViewItemMap!.set(treeViewItemSourceData, this);
 
         this.buttonElement = document.createElement('button');
         this.buttonElement.setAttribute('role','presentation');
@@ -280,13 +284,13 @@ export class TreeViewItem {
 
     private buildTree() {
         if(this.domElement) {
-            if(this.treeItemData.children && this.treeItemData.children.length > 0) {
+            if(this.treeViewItemSourceData.children && this.treeViewItemSourceData.children.length > 0) {
 
                 this.childContainerElement = document.createElement('ul');
                 this.childContainerElement.setAttribute('role', 'group');
 
-                this.treeItemData.children.forEach((childItem: ITreeViewItemData, index)=>{
-                    let newTreeViewItem = new TreeViewItem(childItem, this.treeView, index, this.treeItemData.children.length);
+                this.treeViewItemSourceData.children.forEach((childItem: ITreeViewItemSourceData<T>, index)=>{
+                    let newTreeViewItem = new TreeViewItem<T>(childItem, this.treeView, index, this.treeViewItemSourceData.children.length);
                     this.children.push(newTreeViewItem);
                     this.childContainerElement!.appendChild(newTreeViewItem.domElement!);
                 });
@@ -363,15 +367,15 @@ export class TreeViewItem {
         }
     }
 
-    getTreeViewItemData(): ITreeViewItemData {
-        return this.treeItemData;
+    getTreeViewItemData(): ITreeViewItemSourceData<T> {
+        return this.treeViewItemSourceData;
     }
 
     focus() {
         this.domElement!.focus();
     }
 
-    getNextSibling (): TreeViewItem | undefined {
+    getNextSibling (): TreeViewItem<T> | undefined {
         if(this.domElement) {
             let nextElement = this.domElement.nextSibling as HTMLLIElement;
             if(nextElement) {
@@ -383,7 +387,7 @@ export class TreeViewItem {
         }
     }
 
-    getPreviousSibling (): TreeViewItem | undefined {
+    getPreviousSibling (): TreeViewItem<T> | undefined {
         if(this.domElement) {
             let previousElement = this.domElement.previousSibling as HTMLLIElement;
             if(previousElement) {
@@ -395,7 +399,7 @@ export class TreeViewItem {
         }
     }
 
-    getNextAdjacent (): TreeViewItem | undefined {
+    getNextAdjacent (): TreeViewItem<T> | undefined {
         if(this.domElement) {
             if(this.children.length > 0 && this.domElement.getAttribute('aria-expanded') === "true") {
                 let childElement = this.domElement.querySelector('ul');
@@ -412,8 +416,7 @@ export class TreeViewItem {
         return undefined;
     }
 
-
-    getPreviousAdjacent (): TreeViewItem | undefined {
+    getPreviousAdjacent (): TreeViewItem<T> | undefined {
         if(this.domElement) {
             let parentElementSibling = this.domElement.previousElementSibling;
 
@@ -437,7 +440,7 @@ export class TreeViewItem {
         return undefined;
     }
 
-    getParent (): TreeViewItem | undefined {
+    getParent (): TreeViewItem<T> | undefined {
         if(this.domElement) {
             let parentGroupElement = this.domElement.parentElement as HTMLUListElement;
             let parentItemElement = parentGroupElement.parentElement as HTMLLIElement;
@@ -452,9 +455,9 @@ export class TreeViewItem {
     }
 }
 
-export interface ITreeViewItemData {
+export interface ITreeViewItemSourceData<T = any> {
     id: string,
     textContent: string,
-    data: {},
-    children: ITreeViewItemData[]
+    data: T,
+    children: ITreeViewItemSourceData<T>[]
 }
