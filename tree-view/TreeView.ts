@@ -1,5 +1,5 @@
 export class TreeView<T = any> {
-    private id: string = 'ariaTreeView-' + Date.now().toString();
+    private id: string = Date.now().toString();
     domElement: HTMLUListElement | undefined = undefined;
     styleElement: HTMLStyleElement | undefined = undefined;
     items: TreeViewItem<T>[] = [];
@@ -9,7 +9,7 @@ export class TreeView<T = any> {
     activeItem: TreeViewItem<T> | undefined = undefined;
     selectedItem: TreeViewItem<T> | undefined = undefined;
     sourceData: ITreeViewItemSourceData<T>[] = [];
-    cssClassName: string = `AriaTreeView-${this.id}`;
+    cssClassName: string = `aria-tree-view-${this.id}`;
 
     private cssStyle = `
 .${this.cssClassName} ul[role=group] {
@@ -62,7 +62,7 @@ export class TreeView<T = any> {
 
     constructor(private container: HTMLElement, sourceData: ITreeViewItemSourceData<T>[]) {
         this.domElement = document.createElement('ul');
-        this.domElement.setAttribute('class', `AriaTreeView-${this.id}`);
+        this.domElement.setAttribute('class', this.cssClassName);
         this.domElement.setAttribute('role', 'tree');
         this.styleElement = document.createElement('style');
         this.domElement.prepend(this.styleElement);
@@ -102,6 +102,7 @@ export class TreeView<T = any> {
             this.treeViewItemDataToTreeViewItemMap!.set(item, treeViewItem);
             this.domElement!.appendChild(treeViewItem.domElement!);
         });
+        this.addItemKeyEventHandlers();
     }
 
     private mapKeyUpEvents(element: HTMLLIElement, treeItem: TreeViewItem<T>) {
@@ -191,7 +192,17 @@ export class TreeView<T = any> {
 
     }
 
-    addItemEventHandler(fn: Function) {
+    private addItemKeyEventHandlers() {
+        let treeItems = this.domElement!.querySelectorAll('li');
+        let treeItemsArray = Array.from(treeItems);
+
+        treeItemsArray.forEach((item)=>{
+            let treeItem = this.itemDomElementToTreeViewItemMap!.get(item);
+            this.mapKeyUpEvents(item, treeItem!);
+        })
+    }
+
+    addItemClickEventHandler(fn: Function) {
         let treeItems = this.domElement!.querySelectorAll('li');
         let treeItemsArray = Array.from(treeItems);
 
@@ -301,7 +312,7 @@ export class TreeViewItem<T = any> {
                     this.isExpanded ?  this.setIsExpanded(false) : this.setIsExpanded(true);
                 });
 
-                this.getIsExpanded() ? this.buttonElement.innerHTML = '&nbsp;' : this.buttonElement.innerHTML = '&nbsp;';
+                this.getIsExpanded() ? this.buttonElement.innerHTML = '' : this.buttonElement.innerHTML = '';
 
                 this.domElement.appendChild(this.childContainerElement);
                 this.domElement.prepend(this.buttonElement);
@@ -358,11 +369,11 @@ export class TreeViewItem<T = any> {
 
             if(expanded) {
                 this.childContainerElement.style.display = 'block';
-                this.buttonElement.innerHTML = '&nbsp;';
+                this.buttonElement.innerHTML = '';
 
             } else {
                 this.childContainerElement.style.display = 'none';
-                this.buttonElement.innerHTML = '&nbsp;';
+                this.buttonElement.innerHTML = '';
             }
         }
     }
