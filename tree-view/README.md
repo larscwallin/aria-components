@@ -1,5 +1,5 @@
-# aria-web-components
-The only component, TreeView, is not really a "Web Components", but a WAI-ARIA compatible TypeScript implementation according to the https://www.w3.org/TR/wai-aria-practices-1.1/ note.
+# aria-components
+The only component, TreeView, is a WAI-ARIA compatible TypeScript implementation according to the https://www.w3.org/TR/wai-aria-practices-1.1/ note.
 
 ## TreeView
 Initialize the tree view using `ITreeViewItemSourceData` items and an HTML element to where the component will render to. 
