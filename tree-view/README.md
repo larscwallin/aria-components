@@ -11,7 +11,7 @@ ITreeViewItemSourceData {
     id: string,
     textContent: string,
     data: {},
-    children: ITreeViewItemData[]
+    children: ITreeViewItemSourceData[]
 }
 ```
 
