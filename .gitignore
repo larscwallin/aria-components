@@ -2,3 +2,5 @@
 /dist
 /.cache
 /.idea
+/tree-view/dist
+/tree-view/.cache

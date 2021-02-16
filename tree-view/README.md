@@ -43,7 +43,7 @@ treeItems = [{
 }];
 
 this.navigationTree = new TreeView<IMyCustomItemData>(document.body, treeItems);
-this.navigationTree.addItemEventHandler((navItem: ITreeViewItemSourceData)=>{
+this.navigationTree.addItemClickEventHandler((navItem: ITreeViewItemSourceData)=>{
     this.goToNavItem(navItem.data.myCustomDataUrl);
 });
 this.navigationTree.render();

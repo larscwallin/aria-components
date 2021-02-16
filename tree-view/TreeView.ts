@@ -1,15 +1,18 @@
 export class TreeView<T = any> {
     private id: string = Date.now().toString();
-    domElement: HTMLUListElement | undefined = undefined;
-    styleElement: HTMLStyleElement | undefined = undefined;
-    items: TreeViewItem<T>[] = [];
-    rendered: boolean = false;
-    itemDomElementToTreeViewItemMap: Map<HTMLLIElement | HTMLUListElement, TreeViewItem<T>>;
-    treeViewItemDataToTreeViewItemMap: Map<ITreeViewItemSourceData<T>, TreeViewItem<T>>;
     activeItem: TreeViewItem<T> | undefined = undefined;
+    domElement: HTMLUListElement | undefined = undefined;
+    cssClassName: string = `aria-tree-view-${this.id}`;
+    items: TreeViewItem<T>[] = [];
+    itemDomElementToTreeViewItemMap: Map<HTMLLIElement | HTMLUListElement, TreeViewItem<T>>;
+    treeItemExpandButtonPrepend: boolean = true;
+    treeItemExpandButtonLabelExpanded: string = 'collapse item';
+    treeItemExpandButtonLabelCollapsed: string = 'expand item';
+    rendered: boolean = false;
     selectedItem: TreeViewItem<T> | undefined = undefined;
     sourceData: ITreeViewItemSourceData<T>[] = [];
-    cssClassName: string = `aria-tree-view-${this.id}`;
+    styleElement: HTMLStyleElement | undefined = undefined;
+    treeViewItemDataToTreeViewItemMap: Map<ITreeViewItemSourceData<T>, TreeViewItem<T>>;
 
     private cssStyle = `
 .${this.cssClassName} ul[role=group] {
@@ -88,6 +91,10 @@ export class TreeView<T = any> {
         }
     }
 
+    setPrependExpandTreeItemButton(value: boolean) {
+        this.treeItemExpandButtonPrepend = value;
+    }
+
     private setTreeViewStyle (cssStyle: string) {
         if(this.styleElement) {
             this.styleElement.innerHTML = cssStyle;
@@ -95,8 +102,9 @@ export class TreeView<T = any> {
     }
 
     private buildTree() {
+        let groupSize: number = this.sourceData.length;
         this.sourceData.forEach((item, index)=>{
-            let treeViewItem = new TreeViewItem<T>(item, this, index, item.children.length);
+            let treeViewItem = new TreeViewItem<T>(item, this, index, groupSize);
             this.items.push(treeViewItem);
             this.itemDomElementToTreeViewItemMap!.set(treeViewItem.domElement!, treeViewItem);
             this.treeViewItemDataToTreeViewItemMap!.set(item, treeViewItem);
@@ -288,7 +296,22 @@ export class TreeViewItem<T = any> {
         treeView.treeViewItemDataToTreeViewItemMap!.set(treeViewItemSourceData, this);
 
         this.buttonElement = document.createElement('button');
-        this.buttonElement.setAttribute('role','presentation');
+
+        this.buttonElement.addEventListener('focus', (ev) => {
+            if(this.isHtmlElement(ev.target)) {
+                if(this.getIsExpanded()) {
+                    ev.target.setAttribute('title', this.treeView.treeItemExpandButtonLabelExpanded);
+                } else {
+                    ev.target.setAttribute('title', this.treeView.treeItemExpandButtonLabelCollapsed);
+                }
+            }
+        });
+
+        this.buttonElement.addEventListener('blur', (ev) => {
+            if(this.isHtmlElement(ev.target)) {
+                ev.target.removeAttribute('title');
+            }
+        });
 
         this.buildTree();
     }
@@ -310,12 +333,17 @@ export class TreeViewItem<T = any> {
                     ev.preventDefault();
                     ev.cancelBubble = true;
                     this.isExpanded ?  this.setIsExpanded(false) : this.setIsExpanded(true);
+                    this.setIsActive(true,false);
                 });
 
-                this.getIsExpanded() ? this.buttonElement.innerHTML = '' : this.buttonElement.innerHTML = '';
+                this.buttonElement.innerHTML = '';
 
+                if(this.treeView.treeItemExpandButtonPrepend) {
+                    this.domElement.prepend(this.buttonElement);
+                } else {
+                    this.domElement.appendChild(this.buttonElement);
+                }
                 this.domElement.appendChild(this.childContainerElement);
-                this.domElement.prepend(this.buttonElement);
                 this.setIsExpanded(this.isExpanded);
             }
         }
@@ -370,7 +398,6 @@ export class TreeViewItem<T = any> {
             if(expanded) {
                 this.childContainerElement.style.display = 'block';
                 this.buttonElement.innerHTML = '';
-
             } else {
                 this.childContainerElement.style.display = 'none';
                 this.buttonElement.innerHTML = '';
@@ -463,6 +490,10 @@ export class TreeViewItem<T = any> {
                 return undefined;
             }
         }
+    }
+
+    private isHtmlElement(val: any): val is HTMLElement {
+        return !!val && val instanceof HTMLElement;
     }
 }
 
