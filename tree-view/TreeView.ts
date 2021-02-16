@@ -142,12 +142,13 @@ export class TreeView<T = any> {
                     if(treeItem.getIsExpanded()) {
                         treeItem.setIsExpanded(false);
                         break;
-                    }
-                    parentItem = treeItem!.getParent();
-                    if (parentItem) {
-                        parentItem.setIsActive(true);
                     } else {
-                        this.items[0].setIsActive(true);
+                        parentItem = treeItem!.getParent();
+                        if (parentItem) {
+                            parentItem.setIsActive(true);
+                        } else {
+                            this.items[0].setIsActive(true);
+                        }
                     }
                     break;
 
@@ -220,7 +221,6 @@ export class TreeView<T = any> {
                 ev.cancelBubble = true;
                 fn(treeItem!.getTreeViewItemData());
             });
-            this.mapKeyUpEvents(item, treeItem!);
         })
     }
 
@@ -330,6 +330,7 @@ export class TreeViewItem<T = any> {
                 });
 
                 this.buttonElement.addEventListener('click', (ev)=>{
+                    ev.stopPropagation();
                     ev.preventDefault();
                     ev.cancelBubble = true;
                     this.isExpanded ?  this.setIsExpanded(false) : this.setIsExpanded(true);
