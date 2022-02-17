@@ -48,9 +48,9 @@ export class TreeView<T = any> {
     text-decoration: underline;
 }
 
-`
+`;
 
-    private keyCode = {
+    keyCode = {
         RETURN: 13,
         SPACE: 32,
         PAGEUP: 33,
@@ -60,7 +60,7 @@ export class TreeView<T = any> {
         LEFT: 37,
         UP: 38,
         RIGHT: 39,
-        DOWN: 40
+        DOWN: 40,
     };
 
     constructor(private container: HTMLElement, sourceData: ITreeViewItemSourceData<T>[]) {
@@ -70,7 +70,7 @@ export class TreeView<T = any> {
         this.styleElement = document.createElement('style');
         this.domElement.prepend(this.styleElement);
         this.sourceData = sourceData;
-        this.itemDomElementToTreeViewItemMap = new Map<HTMLLIElement|HTMLUListElement, TreeViewItem<T>>();
+        this.itemDomElementToTreeViewItemMap = new Map<HTMLLIElement | HTMLUListElement, TreeViewItem<T>>();
         this.treeViewItemDataToTreeViewItemMap = new Map<ITreeViewItemSourceData<T>, TreeViewItem<T>>();
 
         this.setTreeViewStyle(this.cssStyle);
@@ -80,13 +80,13 @@ export class TreeView<T = any> {
 
     setId(uid: string) {
         this.id = uid;
-        if(this.domElement) {
+        if (this.domElement) {
             this.domElement.setAttribute('id', this.id);
         }
     }
 
     addClassName(className: string) {
-        if(this.domElement) {
+        if (this.domElement) {
             this.domElement.classList.add(className);
         }
     }
@@ -95,15 +95,15 @@ export class TreeView<T = any> {
         this.treeItemExpandButtonPrepend = value;
     }
 
-    private setTreeViewStyle (cssStyle: string) {
-        if(this.styleElement) {
+    private setTreeViewStyle(cssStyle: string) {
+        if (this.styleElement) {
             this.styleElement.innerHTML = cssStyle;
         }
     }
 
     private buildTree() {
         let groupSize: number = this.sourceData.length;
-        this.sourceData.forEach((item, index)=>{
+        this.sourceData.forEach((item, index) => {
             let treeViewItem = new TreeViewItem<T>(item, this, index, groupSize);
             this.items.push(treeViewItem);
             this.itemDomElementToTreeViewItemMap!.set(treeViewItem.domElement!, treeViewItem);
@@ -116,16 +116,15 @@ export class TreeView<T = any> {
     private mapKeyUpEvents(element: HTMLLIElement, treeItem: TreeViewItem<T>) {
 
         element.addEventListener('keyup', (ev: KeyboardEvent) => {
-            ev.cancelBubble = true;
+            let cancelBubble: boolean = true;
             let previousItem: TreeViewItem<T> | undefined;
             let nextItem: TreeViewItem<T> | undefined;
             let parentItem: TreeViewItem<T> | undefined;
 
-
             switch (ev.keyCode) {
                 case this.keyCode.SPACE:
                 case this.keyCode.RETURN:
-                    if(ev.target instanceof HTMLButtonElement) {
+                    if (ev.target instanceof HTMLButtonElement) {
                         break;
                     }
                     treeItem.setIsSelected();
@@ -139,7 +138,7 @@ export class TreeView<T = any> {
                     break;
 
                 case this.keyCode.LEFT:
-                    if(treeItem.getIsExpanded()) {
+                    if (treeItem.getIsExpanded()) {
                         treeItem.setIsExpanded(false);
                         break;
                     } else {
@@ -158,8 +157,7 @@ export class TreeView<T = any> {
                     if (nextItem) {
                         nextItem.setIsActive(true);
 
-                    }
-                    else {
+                    } else {
                         let parentItem = treeItem!.getParent();
                         if (parentItem) {
                             let nextParentSibling = parentItem.getNextSibling();
@@ -174,8 +172,7 @@ export class TreeView<T = any> {
                     previousItem = treeItem!.getPreviousAdjacent();
                     if (previousItem) {
                         previousItem.setIsActive(true);
-                    }
-                    else {
+                    } else {
                         let parentItem = treeItem!.getParent();
                         if (parentItem) {
                             parentItem.setIsActive(true);
@@ -196,7 +193,14 @@ export class TreeView<T = any> {
                         lastItem.setIsActive(true);
                     }
                     break;
+                default:
+                    cancelBubble = false;
             }
+
+            if (cancelBubble) {
+                ev.cancelBubble = true;
+            }
+
         });
 
     }
@@ -205,37 +209,37 @@ export class TreeView<T = any> {
         let treeItems = this.domElement!.querySelectorAll('li');
         let treeItemsArray = Array.from(treeItems);
 
-        treeItemsArray.forEach((item)=>{
+        treeItemsArray.forEach((item) => {
             let treeItem = this.itemDomElementToTreeViewItemMap!.get(item);
             this.mapKeyUpEvents(item, treeItem!);
-        })
+        });
     }
 
     addItemClickEventHandler(fn: Function) {
         let treeItems = this.domElement!.querySelectorAll('li');
         let treeItemsArray = Array.from(treeItems);
 
-        treeItemsArray.forEach((item)=>{
+        treeItemsArray.forEach((item) => {
             let treeItem = this.itemDomElementToTreeViewItemMap!.get(item);
-            item.addEventListener('click', (ev: MouseEvent)=>{
+            item.addEventListener('click', (ev: MouseEvent) => {
                 ev.cancelBubble = true;
                 fn(treeItem!.getTreeViewItemData());
             });
-        })
+        });
     }
 
-    render(){
+    render() {
         this.rendered = true;
         this.container.appendChild(this.domElement!);
     }
 
-    getTreeItemByElement (el: HTMLLIElement): TreeViewItem<T> | undefined {
+    getTreeItemByElement(el: HTMLLIElement): TreeViewItem<T> | undefined {
         return this.itemDomElementToTreeViewItemMap!.get(el);
     }
 
     getTreeItemByItemSourceData(data: T): TreeViewItem<T> | undefined {
         for (let [key, value] of this.treeViewItemDataToTreeViewItemMap.entries()) {
-            if(key.data == data) {
+            if (key.data == data) {
                 return value;
             }
         }
@@ -244,14 +248,15 @@ export class TreeView<T = any> {
 
     expandToTreeItem(item: TreeViewItem<T>) {
         let parent = item.getParent();
-        if(parent) {
+        if (parent) {
             parent.setIsExpanded(true);
             this.expandToTreeItem(parent);
         }
     }
 
     filterTreeItemsByItemData(filterCallback: (itemData: T) => boolean): TreeViewItem<T>[] {
-        return this.items.filter(item => filterCallback(item.data))
+        let items = Array.from(this.treeViewItemDataToTreeViewItemMap.values());
+        return items.filter(item => filterCallback(item.data));
     }
 
     destroy() {
@@ -274,7 +279,12 @@ export class TreeViewItem<T = any> {
     id: string;
     indexInGroup: number | undefined;
 
-    constructor(private treeViewItemSourceData: ITreeViewItemSourceData<T>, private treeView: TreeView, indexInGroup: number, groupSize: number) {
+    constructor(
+        private treeViewItemSourceData: ITreeViewItemSourceData<T>,
+        private treeView: TreeView,
+        indexInGroup: number,
+        groupSize: number,
+    ) {
         this.textContent = treeViewItemSourceData.textContent;
         this.data = treeViewItemSourceData.data;
         this.id = treeViewItemSourceData.id;
@@ -296,50 +306,28 @@ export class TreeViewItem<T = any> {
         treeView.treeViewItemDataToTreeViewItemMap!.set(treeViewItemSourceData, this);
 
         this.buttonElement = document.createElement('button');
-
-        this.buttonElement.addEventListener('focus', (ev) => {
-            if(this.isHtmlElement(ev.target)) {
-                if(this.getIsExpanded()) {
-                    ev.target.setAttribute('title', this.treeView.treeItemExpandButtonLabelExpanded);
-                } else {
-                    ev.target.setAttribute('title', this.treeView.treeItemExpandButtonLabelCollapsed);
-                }
-            }
-        });
-
-        this.buttonElement.addEventListener('blur', (ev) => {
-            if(this.isHtmlElement(ev.target)) {
-                ev.target.removeAttribute('title');
-            }
-        });
+        this.buttonElement.setAttribute('aria-expanded', 'false');
 
         this.buildTree();
     }
 
     private buildTree() {
-        if(this.domElement) {
-            if(this.treeViewItemSourceData.children && this.treeViewItemSourceData.children.length > 0) {
+        if (this.domElement) {
+            if (this.treeViewItemSourceData.children && this.treeViewItemSourceData.children.length > 0) {
 
                 this.childContainerElement = document.createElement('ul');
                 this.childContainerElement.setAttribute('role', 'group');
 
-                this.treeViewItemSourceData.children.forEach((childItem: ITreeViewItemSourceData<T>, index)=>{
+                this.treeViewItemSourceData.children.forEach((childItem: ITreeViewItemSourceData<T>, index) => {
                     let newTreeViewItem = new TreeViewItem<T>(childItem, this.treeView, index, this.treeViewItemSourceData.children.length);
                     this.children.push(newTreeViewItem);
                     this.childContainerElement!.appendChild(newTreeViewItem.domElement!);
                 });
 
-                this.buttonElement.addEventListener('click', (ev)=>{
-                    ev.stopPropagation();
-                    ev.preventDefault();
-                    ev.cancelBubble = true;
-                    this.isExpanded ?  this.setIsExpanded(false) : this.setIsExpanded(true);
-                    this.setIsActive(true,false);
-                });
-
                 this.buttonElement.innerHTML = '';
+                this.setUpExpandButtonEventHandlers();
 
-                if(this.treeView.treeItemExpandButtonPrepend) {
+                if (this.treeView.treeItemExpandButtonPrepend) {
                     this.domElement.prepend(this.buttonElement);
                 } else {
                     this.domElement.appendChild(this.buttonElement);
@@ -350,9 +338,47 @@ export class TreeViewItem<T = any> {
         }
     }
 
+    private setUpExpandButtonEventHandlers() {
+        this.buttonElement.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            this.isExpanded ? this.setIsExpanded(false) : this.setIsExpanded(true);
+            ev.stopImmediatePropagation();
+        });
+
+        this.buttonElement.addEventListener('keyup', (ev) => {
+            if (ev.code === 'Enter' || ev.code === 'Space') {
+                ev.preventDefault();
+                ev.stopImmediatePropagation();
+            }
+        });
+
+        this.buttonElement.addEventListener('keydown', (ev) => {
+            if (ev.code === 'Enter' || ev.code === 'Space') {
+                ev.stopImmediatePropagation();
+                this.buttonElement.click();
+            }
+        });
+
+        this.buttonElement.addEventListener('focus', (ev) => {
+            if (this.isHtmlElement(ev.target)) {
+                if (this.getIsExpanded()) {
+                    ev.target.setAttribute('title', this.treeView.treeItemExpandButtonLabelExpanded);
+                } else {
+                    ev.target.setAttribute('title', this.treeView.treeItemExpandButtonLabelCollapsed);
+                }
+            }
+        });
+
+        this.buttonElement.addEventListener('blur', (ev) => {
+            if (this.isHtmlElement(ev.target)) {
+                ev.target.removeAttribute('title');
+            }
+        });
+    }
+
     setIsSelected(selected: boolean = true) {
         this.isSelected = selected;
-        if(selected) {
+        if (selected) {
             this.domElement?.setAttribute('aria-selected', 'true');
             this.treeView.selectedItem?.setIsSelected(false);
             this.treeView.selectedItem = this;
@@ -367,13 +393,13 @@ export class TreeViewItem<T = any> {
     }
 
     setIsActive(active: boolean, scrollIntoView: boolean = true) {
-        let scrollIntoViewOptions: ScrollIntoViewOptions = {behavior: "smooth", block: "center", inline: "center"};
-        if(active) {
+        let scrollIntoViewOptions: ScrollIntoViewOptions = {behavior: 'smooth', block: 'center', inline: 'center'};
+        if (active) {
             this.treeView.activeItem?.setIsActive(false);
             this.treeView.activeItem = this;
             this.domElement?.focus();
 
-            if(scrollIntoView) {
+            if (scrollIntoView) {
                 this.domElement?.scrollIntoView(scrollIntoViewOptions);
             }
 
@@ -392,11 +418,12 @@ export class TreeViewItem<T = any> {
     }
 
     setIsExpanded(expanded: boolean = true) {
-        if(this.domElement && this.childContainerElement) {
+        if (this.domElement && this.childContainerElement) {
             this.isExpanded = expanded;
-            this.domElement.setAttribute('aria-expanded', expanded + '');
+            this.domElement.setAttribute('aria-expanded', `${expanded}`);
+            this.buttonElement.setAttribute('aria-expanded', `${expanded}`);
 
-            if(expanded) {
+            if (expanded) {
                 this.childContainerElement.style.display = 'block';
                 this.buttonElement.innerHTML = '';
             } else {
@@ -414,57 +441,55 @@ export class TreeViewItem<T = any> {
         this.domElement!.focus();
     }
 
-    getNextSibling (): TreeViewItem<T> | undefined {
-        if(this.domElement) {
+    getNextSibling(): TreeViewItem<T> | undefined {
+        if (this.domElement) {
             let nextElement = this.domElement.nextSibling as HTMLLIElement;
-            if(nextElement) {
+            if (nextElement) {
                 let nextItem = this.treeView.itemDomElementToTreeViewItemMap!.get(nextElement);
                 return nextItem;
-            } else {
-                return undefined;
-            }
-        }
-    }
-
-    getPreviousSibling (): TreeViewItem<T> | undefined {
-        if(this.domElement) {
-            let previousElement = this.domElement.previousSibling as HTMLLIElement;
-            if(previousElement) {
-                let previousItem = this.treeView.itemDomElementToTreeViewItemMap!.get(previousElement);
-                return previousItem;
-            } else {
-                return undefined;
-            }
-        }
-    }
-
-    getNextAdjacent (): TreeViewItem<T> | undefined {
-        if(this.domElement) {
-            if(this.children.length > 0 && this.domElement.getAttribute('aria-expanded') === "true") {
-                let childElement = this.domElement.querySelector('ul');
-                if(childElement instanceof HTMLUListElement) {
-                    let nextElement = childElement.firstElementChild;
-                    if(nextElement instanceof HTMLLIElement) {
-                        return this.treeView.itemDomElementToTreeViewItemMap!.get(nextElement);
-                    }
-                }
-            } else {
-                return this.getNextSibling()
             }
         }
         return undefined;
     }
 
-    getPreviousAdjacent (): TreeViewItem<T> | undefined {
-        if(this.domElement) {
+    getPreviousSibling(): TreeViewItem<T> | undefined {
+        if (this.domElement) {
+            let previousElement = this.domElement.previousSibling as HTMLLIElement;
+            if (previousElement) {
+                let previousItem = this.treeView.itemDomElementToTreeViewItemMap!.get(previousElement);
+                return previousItem;
+            }
+        }
+        return undefined;
+    }
+
+    getNextAdjacent(): TreeViewItem<T> | undefined {
+        if (this.domElement) {
+            if (this.children.length > 0 && this.domElement.getAttribute('aria-expanded') === 'true') {
+                let childElement = this.domElement.querySelector('ul');
+                if (childElement instanceof HTMLUListElement) {
+                    let nextElement = childElement.firstElementChild;
+                    if (nextElement instanceof HTMLLIElement) {
+                        return this.treeView.itemDomElementToTreeViewItemMap!.get(nextElement);
+                    }
+                }
+            } else {
+                return this.getNextSibling();
+            }
+        }
+        return undefined;
+    }
+
+    getPreviousAdjacent(): TreeViewItem<T> | undefined {
+        if (this.domElement) {
             let parentElementSibling = this.domElement.previousElementSibling;
 
-            if(parentElementSibling instanceof HTMLLIElement && parentElementSibling.getAttribute('aria-expanded') === "true"){
-                if(parentElementSibling.children.length > 0) {
+            if (parentElementSibling instanceof HTMLLIElement && parentElementSibling.getAttribute('aria-expanded') === 'true') {
+                if (parentElementSibling.children.length > 0) {
                     let childElement = parentElementSibling.querySelector('ul');
-                    if(childElement instanceof HTMLUListElement) {
+                    if (childElement instanceof HTMLUListElement) {
                         let previousItem = childElement.lastElementChild;
-                        if(previousItem instanceof HTMLLIElement) {
+                        if (previousItem instanceof HTMLLIElement) {
                             return this.treeView.itemDomElementToTreeViewItemMap!.get(previousItem);
                         }
                     }
@@ -472,25 +497,24 @@ export class TreeViewItem<T = any> {
                     return undefined;
                 }
             } else {
-                return this.getPreviousSibling()
+                return this.getPreviousSibling();
             }
 
         }
         return undefined;
     }
 
-    getParent (): TreeViewItem<T> | undefined {
-        if(this.domElement) {
+    getParent(): TreeViewItem<T> | undefined {
+        if (this.domElement) {
             let parentGroupElement = this.domElement.parentElement as HTMLUListElement;
             let parentItemElement = parentGroupElement.parentElement as HTMLLIElement;
 
-            if(parentItemElement) {
+            if (parentItemElement) {
                 let parentItem = this.treeView.itemDomElementToTreeViewItemMap!.get(parentItemElement);
                 return parentItem;
-            } else {
-                return undefined;
             }
         }
+        return undefined;
     }
 
     private isHtmlElement(val: any): val is HTMLElement {
