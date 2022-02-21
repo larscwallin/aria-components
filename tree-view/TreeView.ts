@@ -9,7 +9,7 @@ export class TreeView<T = any> {
     treeItemExpandButtonLabelExpanded: string = 'collapse item';
     treeItemExpandButtonLabelCollapsed: string = 'expand item';
     rendered: boolean = false;
-    selectedItem: TreeViewItem<T> | undefined = undefined;
+    selectedItems: Set<TreeViewItem<T>>;
     sourceData: ITreeViewItemSourceData<T>[] = [];
     styleElement: HTMLStyleElement | undefined = undefined;
     treeViewItemDataToTreeViewItemMap: Map<ITreeViewItemSourceData<T>, TreeViewItem<T>>;
@@ -36,11 +36,11 @@ export class TreeView<T = any> {
     content: ' ';
 }
 
-.${this.cssClassName} li[aria-expanded=true] button:before {
+.${this.cssClassName} li[aria-expanded=true] button span:before {
     content: '▾';
 }
 
-.${this.cssClassName} li[aria-expanded=false] button:before {
+.${this.cssClassName} li[aria-expanded=false] button span:before {
     content: '▸';
 }
 
@@ -72,7 +72,7 @@ export class TreeView<T = any> {
         this.sourceData = sourceData;
         this.itemDomElementToTreeViewItemMap = new Map<HTMLLIElement | HTMLUListElement, TreeViewItem<T>>();
         this.treeViewItemDataToTreeViewItemMap = new Map<ITreeViewItemSourceData<T>, TreeViewItem<T>>();
-
+        this.selectedItems = new Set<TreeViewItem<T>>();
         this.setTreeViewStyle(this.cssStyle);
 
         this.buildTree();
@@ -259,6 +259,12 @@ export class TreeView<T = any> {
         return items.filter(item => filterCallback(item.data));
     }
 
+    deselectAllItems() {
+        this.selectedItems.forEach((item: TreeViewItem) => {
+            item.setIsSelected(false);
+        });
+    }
+
     destroy() {
 
     }
@@ -268,6 +274,7 @@ export class TreeViewItem<T = any> {
     private childContainerElement: HTMLUListElement | undefined = undefined;
     private labelElement: HTMLAnchorElement;
     private buttonElement: HTMLButtonElement;
+    private buttonLabelElement: HTMLElement;
     private isExpanded: boolean = false;
     private isActive: boolean = false;
     private isSelected: boolean = false;
@@ -308,12 +315,19 @@ export class TreeViewItem<T = any> {
         this.buttonElement = document.createElement('button');
         this.buttonElement.setAttribute('aria-expanded', 'false');
 
+        this.buttonLabelElement = document.createElement('span');
+        this.buttonLabelElement.setAttribute('aria-hidden', 'true');
+
+        this.buttonElement.appendChild(this.buttonLabelElement);
+
         this.buildTree();
     }
 
     private buildTree() {
         if (this.domElement) {
             if (this.treeViewItemSourceData.children && this.treeViewItemSourceData.children.length > 0) {
+
+                this.domElement.setAttribute('data-treeview-role', 'group');
 
                 this.childContainerElement = document.createElement('ul');
                 this.childContainerElement.setAttribute('role', 'group');
@@ -324,7 +338,7 @@ export class TreeViewItem<T = any> {
                     this.childContainerElement!.appendChild(newTreeViewItem.domElement!);
                 });
 
-                this.buttonElement.innerHTML = '';
+                this.buttonElement.setAttribute('role', 'presentation');
                 this.setUpExpandButtonEventHandlers();
 
                 if (this.treeView.treeItemExpandButtonPrepend) {
@@ -380,11 +394,11 @@ export class TreeViewItem<T = any> {
         this.isSelected = selected;
         if (selected) {
             this.domElement?.setAttribute('aria-selected', 'true');
-            this.treeView.selectedItem?.setIsSelected(false);
-            this.treeView.selectedItem = this;
+            //this.treeView.selectedItems?.setIsSelected(false);
+            this.treeView.selectedItems?.add(this);
         } else {
             this.domElement?.removeAttribute('aria-selected');
-            this.treeView.selectedItem = undefined;
+            this.treeView.selectedItems.delete(this);
         }
     }
 
@@ -425,10 +439,8 @@ export class TreeViewItem<T = any> {
 
             if (expanded) {
                 this.childContainerElement.style.display = 'block';
-                this.buttonElement.innerHTML = '';
             } else {
                 this.childContainerElement.style.display = 'none';
-                this.buttonElement.innerHTML = '';
             }
         }
     }
