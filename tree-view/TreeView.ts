@@ -61,7 +61,10 @@ export class TreeView<T = any> {
         UP: 38,
         RIGHT: 39,
         DOWN: 40,
+        TAB: 9
     };
+
+
 
     constructor(private container: HTMLElement, sourceData: ITreeViewItemSourceData<T>[]) {
         this.domElement = document.createElement('ul');
@@ -69,39 +72,41 @@ export class TreeView<T = any> {
         this.domElement.setAttribute('role', 'tree');
         this.styleElement = document.createElement('style');
         this.domElement.prepend(this.styleElement);
-        this.sourceData = sourceData;
+        this.sourceData = sourceData || [];
         this.itemDomElementToTreeViewItemMap = new Map<HTMLLIElement | HTMLUListElement, TreeViewItem<T>>();
         this.treeViewItemDataToTreeViewItemMap = new Map<ITreeViewItemSourceData<T>, TreeViewItem<T>>();
         this.selectedItems = new Set<TreeViewItem<T>>();
         this.setTreeViewStyle(this.cssStyle);
 
-        this.buildTree();
+        if(this.sourceData.length > 0) {
+            this.buildTreeFromSourceData();
+        }
     }
 
-    setId(uid: string) {
+    setId(uid: string): void {
         this.id = uid;
         if (this.domElement) {
             this.domElement.setAttribute('id', this.id);
         }
     }
 
-    addClassName(className: string) {
+    addClassName(className: string): void {
         if (this.domElement) {
             this.domElement.classList.add(className);
         }
     }
 
-    setPrependExpandTreeItemButton(value: boolean) {
+    setPrependExpandTreeItemButton(value: boolean): void {
         this.treeItemExpandButtonPrepend = value;
     }
 
-    private setTreeViewStyle(cssStyle: string) {
+    private setTreeViewStyle(cssStyle: string): void {
         if (this.styleElement) {
             this.styleElement.innerHTML = cssStyle;
         }
     }
 
-    private buildTree() {
+    private buildTreeFromSourceData(): void {
         let groupSize: number = this.sourceData.length;
         this.sourceData.forEach((item, index) => {
             let treeViewItem = new TreeViewItem<T>(item, this, index, groupSize);
@@ -113,14 +118,20 @@ export class TreeView<T = any> {
         this.addItemKeyEventHandlers();
     }
 
-    private mapKeyUpEvents(element: HTMLLIElement, treeItem: TreeViewItem<T>) {
-
+    private mapKeyUpEvents(element: HTMLLIElement, treeItem: TreeViewItem<T>): void {
+        element.addEventListener('keydown', (ev: KeyboardEvent)=>{
+            if(ev.keyCode !== this.keyCode.TAB && ev.keyCode !== this.keyCode.RETURN) {
+                ev.preventDefault();
+                ev.stopImmediatePropagation();
+            }
+        });
         element.addEventListener('keyup', (ev: KeyboardEvent) => {
             let cancelBubble: boolean = true;
             let previousItem: TreeViewItem<T> | undefined;
             let nextItem: TreeViewItem<T> | undefined;
             let parentItem: TreeViewItem<T> | undefined;
 
+            // Not really deprecated, please ignore
             switch (ev.keyCode) {
                 case this.keyCode.SPACE:
                 case this.keyCode.RETURN:
@@ -205,7 +216,7 @@ export class TreeView<T = any> {
 
     }
 
-    private addItemKeyEventHandlers() {
+    private addItemKeyEventHandlers(): void {
         let treeItems = this.domElement!.querySelectorAll('li');
         let treeItemsArray = Array.from(treeItems);
 
@@ -215,7 +226,7 @@ export class TreeView<T = any> {
         });
     }
 
-    addItemClickEventHandler(fn: Function) {
+    addItemClickEventHandler(fn: (treeViewItemSourceData: ITreeViewItemSourceData<T>) => void): void {
         let treeItems = this.domElement!.querySelectorAll('li');
         let treeItemsArray = Array.from(treeItems);
 
@@ -228,9 +239,15 @@ export class TreeView<T = any> {
         });
     }
 
-    render() {
+    render(): void {
         this.rendered = true;
         this.container.appendChild(this.domElement!);
+    }
+
+    collapseAll(): void {
+        this.items.forEach((item)=>{
+            item.setIsExpanded(false);
+        });
     }
 
     getTreeItemByElement(el: HTMLLIElement): TreeViewItem<T> | undefined {
@@ -246,7 +263,7 @@ export class TreeView<T = any> {
         return undefined;
     }
 
-    expandToTreeItem(item: TreeViewItem<T>) {
+    expandToTreeItem(item: TreeViewItem<T>): void {
         let parent = item.getParent();
         if (parent) {
             parent.setIsExpanded(true);
@@ -259,13 +276,13 @@ export class TreeView<T = any> {
         return items.filter(item => filterCallback(item.data));
     }
 
-    deselectAllItems() {
+    deselectAllItems(): void {
         this.selectedItems.forEach((item: TreeViewItem) => {
             item.setIsSelected(false);
         });
     }
 
-    destroy() {
+    destroy(): void {
 
     }
 }
@@ -320,10 +337,10 @@ export class TreeViewItem<T = any> {
 
         this.buttonElement.appendChild(this.buttonLabelElement);
 
-        this.buildTree();
+        this.buildTreeItemBranchFromSourceData();
     }
 
-    private buildTree() {
+    private buildTreeItemBranchFromSourceData(): void {
         if (this.domElement) {
             if (this.treeViewItemSourceData.children && this.treeViewItemSourceData.children.length > 0) {
 
@@ -352,7 +369,7 @@ export class TreeViewItem<T = any> {
         }
     }
 
-    private setUpExpandButtonEventHandlers() {
+    private setUpExpandButtonEventHandlers(): void {
         this.buttonElement.addEventListener('click', (ev) => {
             ev.preventDefault();
             this.isExpanded ? this.setIsExpanded(false) : this.setIsExpanded(true);
@@ -390,7 +407,7 @@ export class TreeViewItem<T = any> {
         });
     }
 
-    setIsSelected(selected: boolean = true) {
+    setIsSelected(selected: boolean = true): void {
         this.isSelected = selected;
         if (selected) {
             this.domElement?.setAttribute('aria-selected', 'true');
@@ -402,11 +419,11 @@ export class TreeViewItem<T = any> {
         }
     }
 
-    getIsSelected() {
+    getIsSelected(): boolean {
         return this.isSelected;
     }
 
-    setIsActive(active: boolean, scrollIntoView: boolean = true) {
+    setIsActive(active: boolean, scrollIntoView: boolean = true): void {
         let scrollIntoViewOptions: ScrollIntoViewOptions = {behavior: 'smooth', block: 'center', inline: 'center'};
         if (active) {
             this.treeView.activeItem?.setIsActive(false);
@@ -431,7 +448,7 @@ export class TreeViewItem<T = any> {
         return this.isExpanded;
     }
 
-    setIsExpanded(expanded: boolean = true) {
+    setIsExpanded(expanded: boolean = true): void {
         if (this.domElement && this.childContainerElement) {
             this.isExpanded = expanded;
             this.domElement.setAttribute('aria-expanded', `${expanded}`);
@@ -449,7 +466,7 @@ export class TreeViewItem<T = any> {
         return this.treeViewItemSourceData;
     }
 
-    focus() {
+    focus(): void {
         this.domElement!.focus();
     }
 
